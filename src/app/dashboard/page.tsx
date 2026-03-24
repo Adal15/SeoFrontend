@@ -2,6 +2,7 @@
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { API_BASE_URL } from '../../config';
 
 export default function Dashboard() {
     const [reports, setReports] = useState<any[]>([]);
@@ -12,15 +13,17 @@ export default function Dashboard() {
         const fetchReports = async () => {
             try {
                 const token = localStorage.getItem('token');
-                // const res = await fetch('http://localhost:5000/api/reports', {
-                const res = await fetch('https://seobackend-skx1.onrender.com/api/reports', {
-                    headers: {
+                const res = await fetch(`${API_BASE_URL}/api/reports`, {
+                    headers: {  
                         Authorization: `Bearer ${token}`
                     }
                 });
                 if (res.ok) {
                     const data = await res.json();
                     setReports(data);
+                } else if (res.status === 401) {
+                    localStorage.removeItem('token');
+                    window.location.href = '/login';
                 }
             } catch (error) {
                 console.error("Failed to fetch reports:", error);

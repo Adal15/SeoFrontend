@@ -2,6 +2,7 @@
 import { Chart as ChartJS, RadialLinearScale, ArcElement, Tooltip, Legend } from 'chart.js';
 import { PolarArea } from 'react-chartjs-2';
 import { use, useEffect, useState } from 'react';
+import { API_BASE_URL } from '../../../../config';
 
 ChartJS.register(RadialLinearScale, ArcElement, Tooltip, Legend);
 
@@ -139,9 +140,16 @@ export default function ReportDetail({ params }: { params: Promise<{ id: string 
         const fetchReport = async () => {
             try {
                 const token = localStorage.getItem('token');
-                const res = await fetch(`https://seobackend-skx1.onrender.com/api/reports/${resolvedParams.id}`, {
+                const res = await fetch(`${API_BASE_URL}/api/reports/${resolvedParams.id}`, {
                     headers: { Authorization: `Bearer ${token}` }
                 });
+                
+                if (res.status === 401) {
+                    localStorage.removeItem('token');
+                    window.location.href = '/login';
+                    return;
+                }
+                
                 if (!res.ok) throw new Error('Failed to fetch report');
                 setReport(await res.json());
             } catch (err: any) {

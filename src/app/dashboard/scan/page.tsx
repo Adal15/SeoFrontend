@@ -1,6 +1,7 @@
 "use client";
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { API_BASE_URL } from '../../../config';
 
 export default function ScanPage() {
     const [url, setUrl] = useState('');
@@ -17,8 +18,7 @@ export default function ScanPage() {
             const token = localStorage.getItem('token');
             const submitUrl = url.startsWith('http') ? url : `https://${url}`;
 
-            // const res = await fetch('http://localhost:5000/api/reports/analyze', {
-            const res = await fetch('https://seobackend-skx1.onrender.com/api/reports/analyze', {
+            const res = await fetch(`${API_BASE_URL}/api/reports/analyze`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -28,6 +28,12 @@ export default function ScanPage() {
             });
 
             const data = await res.json();
+
+            if (res.status === 401) {
+                localStorage.removeItem('token');
+                window.location.href = '/login';
+                return;
+            }
 
             if (!res.ok) {
                 throw new Error(data.message || 'Failed to start scan');

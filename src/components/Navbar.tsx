@@ -1,6 +1,37 @@
+"use client";
 import Link from 'next/link';
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 
 export default function Navbar() {
+    const [isLoggedIn, setIsLoggedIn] = useState(false);
+    const router = useRouter();
+
+    useEffect(() => {
+        const checkAuth = () => {
+            const token = localStorage.getItem('token');
+            setIsLoggedIn(!!token);
+        };
+
+        checkAuth();
+        // Listen for storage changes (for logout from other tabs or components)
+        window.addEventListener('storage', checkAuth);
+        
+        // Custom event for same-window updates if needed
+        const interval = setInterval(checkAuth, 1000);
+        
+        return () => {
+            window.removeEventListener('storage', checkAuth);
+            clearInterval(interval);
+        };
+    }, []);
+
+    const handleLogout = () => {
+        localStorage.removeItem('token');
+        setIsLoggedIn(false);
+        router.push('/login');
+    };
+
     return (
         <nav className="fixed top-0 w-full z-50 glass-panel border-b-0 border-x-0 rounded-none bg-slate-900/50">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -14,10 +45,27 @@ export default function Navbar() {
                     <div className="hidden md:flex items-center space-x-8">
                         <Link href="/#features" className="text-sm font-medium text-slate-300 hover:text-white transition-colors duration-200">Features</Link>
                         <Link href="/pricing" className="text-sm font-medium text-slate-300 hover:text-white transition-colors duration-200">Pricing</Link>
-                        <Link href="/login" className="text-sm font-medium text-slate-300 hover:text-white transition-colors duration-200">Login</Link>
-                        <Link href="/dashboard" className="bg-blue-600 hover:bg-blue-500 text-white px-6 py-2.5 rounded-full text-sm font-semibold transition-all duration-300 shadow-[0_0_15px_rgba(37,99,235,0.4)] hover:shadow-[0_0_25px_rgba(37,99,235,0.6)]">
-                            Get Started
-                        </Link>
+                        
+                        {isLoggedIn ? (
+                            <>
+                                <button 
+                                    onClick={handleLogout}
+                                    className="text-sm font-medium text-red-400 hover:text-red-300 transition-colors duration-200"
+                                >
+                                    Logout
+                                </button>
+                                <Link href="/dashboard" className="bg-blue-600 hover:bg-blue-500 text-white px-6 py-2.5 rounded-full text-sm font-semibold transition-all duration-300 shadow-[0_0_15px_rgba(37,99,235,0.4)] hover:shadow-[0_0_25px_rgba(37,99,235,0.6)]">
+                                    Dashboard
+                                </Link>
+                            </>
+                        ) : (
+                            <>
+                                <Link href="/login" className="text-sm font-medium text-slate-300 hover:text-white transition-colors duration-200">Login</Link>
+                                <Link href="/register" className="bg-blue-600 hover:bg-blue-500 text-white px-6 py-2.5 rounded-full text-sm font-semibold transition-all duration-300 shadow-[0_0_15px_rgba(37,99,235,0.4)] hover:shadow-[0_0_25px_rgba(37,99,235,0.6)]">
+                                    Get Started
+                                </Link>
+                            </>
+                        )}
                     </div>
                 </div>
             </div>
