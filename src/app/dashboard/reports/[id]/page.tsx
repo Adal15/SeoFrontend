@@ -108,6 +108,37 @@ function Section({ title, color, children }: { title: string; color: string; chi
     );
 }
 
+function SearchPreview({ title, desc, url, mobile = false }: { title: string; desc: string; url: string; mobile?: boolean }) {
+    return (
+        <div className={`bg-white rounded-lg p-5 border border-slate-200 shadow-sm mb-4 ${mobile ? 'max-w-[360px]' : 'max-w-2xl'}`}>
+            <div className="flex flex-col gap-1">
+                <div className="text-[#1a0dab] hover:underline text-xl cursor-pointer leading-tight font-medium truncate">
+                    {title || 'Missing Title'}
+                </div>
+                <div className="text-[#006621] text-sm truncate">
+                    {url || 'https://example.com'}
+                </div>
+                <p className="text-[#4d5156] text-sm mt-1 line-clamp-2">
+                    {desc || 'No description provided. Add a meta description to improve search appearance.'}
+                </p>
+            </div>
+        </div>
+    );
+}
+
+function MobileSnapshot({ url }: { url: string }) {
+    if (!url) return null;
+    return (
+        <div className="flex flex-col items-center bg-slate-900/40 rounded-xl p-6 border border-slate-700/30 w-full">
+            <div className="relative w-[240px] h-[480px] bg-black rounded-[2.5rem] border-[8px] border-slate-800 shadow-2xl overflow-hidden">
+                 <div className="absolute top-0 left-1/2 -translate-x-1/2 w-24 h-5 bg-slate-800 rounded-b-xl z-20"></div>
+                 <img src={url} alt="Mobile Snapshot" className="w-full h-full object-cover" />
+            </div>
+            <p className="text-slate-500 text-[10px] mt-4 italic uppercase tracking-widest">Mobile Live Preview</p>
+        </div>
+    );
+}
+
 // ─── Score circle ─────────────────────────────────────────────────────────────
 
 function ScoreCircle({ score, label }: { score: number; label: string }) {
@@ -135,6 +166,8 @@ export default function ReportDetail({ params }: { params: Promise<{ id: string 
     const [report, setReport] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
+    const [showOnlyBasicSEO, setShowOnlyBasicSEO] = useState(false);
+    const [userPlanType, setUserPlanType] = useState('Basic Report');
 
     useEffect(() => {
         const fetchReport = async () => {
@@ -151,7 +184,38 @@ export default function ReportDetail({ params }: { params: Promise<{ id: string 
                 }
                 
                 if (!res.ok) throw new Error('Failed to fetch report');
-                setReport(await res.json());
+                const data = await res.json();
+                console.log('[DEBUG] Report Data:', data);
+                setReport(data);
+                
+                // Also fetch current user plan as a more reliable source
+                let currentPlan = 'Basic Report';
+                try {
+                    const planRes = await fetch(`${API_BASE_URL}/api/plans/current`, {
+                        headers: { Authorization: `Bearer ${token}` }
+                    });
+                    if (planRes.ok) {
+                        const planData = await planRes.json();
+                        currentPlan = planData.planType || 'Basic Report';
+                        console.log('[DEBUG] Fetched User Plan:', currentPlan);
+                    } else if (data.planType) {
+                        currentPlan = data.planType;
+                    }
+                } catch (planErr) {
+                    console.error('[DEBUG] Plan fetch failed, using fallback:', planErr);
+                    if (data.planType) currentPlan = data.planType;
+                }
+
+                setUserPlanType(currentPlan.trim());
+                console.log('[DEBUG] Final Plan Type:', currentPlan.trim());
+
+                if (currentPlan.trim() === 'Basic Report') {
+                    console.log('[DEBUG] Forcing Basic SEO View');
+                    setShowOnlyBasicSEO(true);
+                } else {
+                    console.log('[DEBUG] Allowing Full Report View');
+                    setShowOnlyBasicSEO(false);
+                }
             } catch (err: any) {
                 setError(err.message);
             } finally {
@@ -267,6 +331,17 @@ export default function ReportDetail({ params }: { params: Promise<{ id: string 
                 <div>
                     <h1 className="text-3xl font-bold text-white mb-1" style={{ fontFamily: 'var(--font-outfit)' }}>SEO Audit Report</h1>
                     <p className="text-slate-400">Target: <span className="text-blue-400 font-medium">{report.website?.url || 'Unknown'}</span></p>
+                    {(userPlanType !== 'Basic Report') && (
+                        <div className="mt-4 flex items-center gap-3">
+                            <label className="text-slate-400 text-xs font-medium uppercase tracking-wider">Report Filter:</label>
+                            <button 
+                                onClick={() => setShowOnlyBasicSEO(!showOnlyBasicSEO)}
+                                className={`px-3 py-1 rounded-full text-xs font-bold transition-all border ${showOnlyBasicSEO ? 'bg-blue-600 text-white border-blue-500 shadow-[0_0_10px_rgba(37,99,235,0.4)]' : 'bg-slate-800 text-slate-400 border-slate-700 hover:bg-slate-700'}`}
+                            >
+                                {showOnlyBasicSEO ? 'Basic SEO Only' : 'Full Detailed Report'}
+                            </button>
+                        </div>
+                    )}
                 </div>
                 <div className="flex gap-4 items-center flex-wrap">
                     <button onClick={() => window.print()} className="glass-panel px-4 py-2 text-sm font-medium hover:bg-white/10 transition-colors cursor-pointer">
@@ -289,10 +364,16 @@ export default function ReportDetail({ params }: { params: Promise<{ id: string 
                     </div>
                 </div>
                 <div className="glass-panel p-6 lg:col-span-2">
-                    <h3 className="text-base font-bold text-white mb-4">Critical Issues Detected</h3>
+                    <h3 className="text-base font-bold text-white mb-4">
+                        {showOnlyBasicSEO ? 'Critical Issues Detected Basic SEO' : 'Critical Issues Detected'}
+                    </h3>
                     <div className="space-y-3">
-                        {report.issues && report.issues.length > 0 ? (
-                            report.issues.slice(0, 8).map((iss: any, i: number) => (
+                        {report.issues && report.issues.length > 0 ? (() => {
+                            const filteredIssues = showOnlyBasicSEO 
+                                ? report.issues.filter((iss: any) => iss.impact === 'High')
+                                : report.issues;
+                            
+                            return (filteredIssues.length > 0 ? filteredIssues : []).slice(0, 8).map((iss: any, i: number) => (
                                 <div key={i} className="flex gap-3 p-3 rounded-lg bg-slate-900/50 border border-slate-700/40 hover:bg-slate-800/50 transition-colors">
                                     <span className={`shrink-0 px-2 py-0.5 rounded text-xs font-bold border ${iss.impact === 'High' ? 'text-red-400 bg-red-500/10 border-red-500/20' : iss.impact === 'Medium' ? 'text-yellow-400 bg-yellow-500/10 border-yellow-500/20' : 'text-blue-400 bg-blue-500/10 border-blue-500/20'}`}>
                                         {iss.impact}
@@ -302,8 +383,8 @@ export default function ReportDetail({ params }: { params: Promise<{ id: string 
                                         <p className="text-slate-400 text-xs mt-0.5">{iss.recommendation}</p>
                                     </div>
                                 </div>
-                            ))
-                        ) : (
+                            ));
+                        })() : (
                             <div className="text-green-400 p-4 bg-green-500/10 border border-green-500/20 rounded-lg">
                                 Excellent! No critical SEO issues were detected.
                             </div>
@@ -425,25 +506,135 @@ export default function ReportDetail({ params }: { params: Promise<{ id: string 
                 />
             </Section>
 
-            {/* ── TECHNICAL Section ─────────────────────────────────────────────── */}
-            <Section title="Technical" color="bg-slate-800/60">
-                {[
-                    { label: 'Robots.txt',       passed: report.hasRobotsTxt,   fix: 'Create /robots.txt. Minimum: User-agent: *\\nAllow: /' },
-                    { label: 'XML Sitemap',      passed: report.hasSitemap,     fix: 'Generate sitemap.xml and submit it in Google Search Console.' },
-                    { label: 'Custom 404 Page',  passed: report.hasCustom404,   fix: 'Build a custom 404.html that matches your site design and links back to your homepage.' },
-                    { label: 'Favicon',          passed: report.hasFavicon,     fix: 'Add <link rel="icon" href="/favicon.ico"> inside your <head> tag.' },
-                    { label: 'WWW Canonical',    passed: report.isWwwOptimized, fix: 'Set up a 301 redirect so both www and non-www resolve to your canonical URL.' },
-                    { label: 'Viewport Meta',    passed: report.hasViewportMeta,fix: 'Add <meta name="viewport" content="width=device-width, initial-scale=1">.' },
-                ].map(({ label, passed, fix }) => (
-                    <AuditRow
-                        key={label}
-                        label={label}
-                        status={passed ? 'pass' : 'fail'}
-                        summary={passed ? `${label} is properly configured.` : `${label} is missing or misconfigured.`}
-                        fix={fix}
-                    />
-                ))}
-            </Section>
+            {/* ── ADVANCED SEO Section ─────────────────────────────────────────────── */}
+            {!showOnlyBasicSEO && (
+                <>
+                    <Section title="Advanced SEO" color="bg-slate-800/60">
+                        <AuditRow
+                            label="Search Preview"
+                            status="info"
+                            summary="Here is how the site may appear in search results:"
+                        >
+                            <SearchPreview title={report.titleText} desc={report.metaDescText} url={report.website?.url} />
+                        </AuditRow>
+
+                        <AuditRow
+                            label="Canonical Tag"
+                            status={report.canonicalUrl ? 'pass' : 'warn'}
+                            summary={report.canonicalUrl ? `Canonical link found: ${report.canonicalUrl}` : 'No canonical link tag found on the page.'}
+                            fix="Add <link rel='canonical' href='https://yourdomain.com/page-url'> to prevent duplicate content issues."
+                        />
+
+                        <AuditRow
+                            label="Noindex Meta"
+                            status={report.hasNoindex ? 'fail' : 'pass'}
+                            summary={report.hasNoindex ? 'The page contains the noindex meta tag or header.' : 'The page is indexable (no noindex tag found).'}
+                            fix="Remove the <meta name='robots' content='noindex'> tag if you want this page to be indexed by search engines."
+                        />
+
+                        <AuditRow
+                            label="Mobile Search Preview"
+                            status="info"
+                            summary="Here is how the site may appear in search results on a mobile device:"
+                        >
+                            <SearchPreview title={report.titleText} desc={report.metaDescText} url={report.website?.url} mobile />
+                        </AuditRow>
+
+                        <AuditRow
+                            label="Mobile Snapshot"
+                            status="info"
+                            summary="Live mobile preview of your website:"
+                        >
+                            <MobileSnapshot url={report.mobileSnapshotUrl} />
+                        </AuditRow>
+
+                        <AuditRow
+                            label="OpenGraph Meta"
+                            status={report.ogTags?.title ? 'pass' : 'warn'}
+                            summary={report.ogTags?.title ? 'Opengraph meta tags are properly configured.' : 'Some Opengraph meta tags are missing.'}
+                            fix="Add <meta property='og:title' content='...'> and other OG tags to optimize social media sharing."
+                        />
+
+                        <AuditRow
+                            label="Schema Meta Data"
+                            status={report.hasSchemaData ? 'pass' : 'warn'}
+                            summary={report.hasSchemaData ? 'Schema.org data found on the page.' : 'No Schema.org data found on the page.'}
+                            fix="Use JSON-LD to add Schema documentation (like Article, Product, etc.) to your page."
+                        />
+
+                        <AuditRow
+                            label="Sitemaps"
+                            status={report.hasSitemap ? 'pass' : 'fail'}
+                            summary={report.hasSitemap ? 'Sitemap found successfully.' : 'No sitemaps found.'}
+                            fix="Create a sitemap.xml file and list it in your robots.txt."
+                        />
+
+                        <AuditRow
+                            label="Robots.txt"
+                            status={report.hasRobotsTxt ? 'pass' : 'fail'}
+                            summary={report.hasRobotsTxt ? 'Robots.txt file found.' : 'Robots.txt file is missing or unavailable.'}
+                            fix="Create a robots.txt file at the root of your website."
+                        />
+
+                        <AuditRow
+                            label="Keep your content fresh"
+                            status={report.contentFreshness?.lastModified || report.contentFreshness?.ogUpdatedTime ? 'pass' : 'warn'}
+                            summary={report.contentFreshness?.lastModified ? `Content refreshed on: ${new Date(report.contentFreshness.lastModified).toLocaleDateString()}` : 'No content freshness information found.'}
+                            fix="Update your content regularly and ensure your server sends a Last-Modified header."
+                        />
+
+                        <AuditRow
+                            label="Broken Links"
+                            status={report.brokenLinks?.length === 0 ? 'pass' : 'warn'}
+                            summary={report.brokenLinks?.length === 0 ? 'No broken internal links detected.' : `Found ${report.brokenLinks.length} broken link(s).`}
+                            fix="Fix broken links to improve crawl efficiency and user experience."
+                        >
+                            {report.brokenLinks && report.brokenLinks.length > 0 && (
+                                <div className="space-y-1 mt-2">
+                                    {report.brokenLinks.map((link: any, i: number) => (
+                                        <p key={i} className="text-xs text-red-400 font-mono">[{link.status}] {link.url}</p>
+                                    ))}
+                                </div>
+                            )}
+                        </AuditRow>
+
+                        <AuditRow
+                            label="Google Ranking"
+                            status={report.googleRanking?.rank > 0 ? (report.googleRanking.rank <= 10 ? 'pass' : 'warn') : (report.googleRanking?.rank === -1 ? 'pass' : 'info')}
+                            summary={
+                                report.googleRanking?.rank > 0 
+                                ? `Your website is currently ranked #${report.googleRanking.rank} on Google for the primary keyword "${report.googleRanking.keyword}".`
+                                : (report.googleRanking?.rank === -1
+                                    ? `Your website was found in the top search results for "${report.googleRanking.keyword}", but its exact position is currently obscured.`
+                                    : (report.googleRanking?.keyword 
+                                        ? `Your website was not found in the top 30 search results for "${report.googleRanking.keyword}".`
+                                        : "Could not determine Google ranking. No primary keyword was identified on your page."))
+                            }
+                            fix="To improve your rank, focus on high-quality content, improving page speed, and building authoritative backlinks for your target keywords."
+                        />
+                    </Section>
+
+                    {/* ── TECHNICAL Section ─────────────────────────────────────────────── */}
+                    <Section title="Technical" color="bg-slate-800/60">
+                        {[
+                            { label: 'Robots.txt',       passed: report.hasRobotsTxt,   fix: 'Create /robots.txt. Minimum: User-agent: *\\nAllow: /' },
+                            { label: 'XML Sitemap',      passed: report.hasSitemap,     fix: 'Generate sitemap.xml and submit it in Google Search Console.' },
+                            { label: 'Custom 404 Page',  passed: report.hasCustom404,   fix: 'Build a custom 404.html that matches your site design and links back to your homepage.' },
+                            { label: 'Favicon',          passed: report.hasFavicon,     fix: 'Add <link rel="icon" href="/favicon.ico"> inside your <head> tag.' },
+                            { label: 'WWW Canonical',    passed: report.isWwwOptimized, fix: 'Set up a 301 redirect so both www and non-www resolve to your canonical URL.' },
+                            { label: 'Viewport Meta',    passed: report.hasViewportMeta,fix: 'Add <meta name="viewport" content="width=device-width, initial-scale=1">.' },
+                        ].map(({ label, passed, fix }) => (
+                            <AuditRow
+                                key={label}
+                                label={label}
+                                status={passed ? 'pass' : 'fail'}
+                                summary={passed ? `${label} is properly configured.` : `${label} is missing or misconfigured.`}
+                                fix={fix}
+                            />
+                        ))}
+                    </Section>
+                </>
+            )}
 
         </div>
     );

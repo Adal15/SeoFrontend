@@ -30,7 +30,11 @@ export default function LoginPage() {
 
             // Save token and redirect
             localStorage.setItem('token', data.token);
-            router.push('/dashboard');
+            if (data.hasPlan) {
+                router.push('/dashboard');
+            } else {
+                router.push('/plans');
+            }
         } catch (err: any) {
             console.error("Login error:", err);
             setError(err.message);

@@ -8,6 +8,8 @@ export default function RegisterPage() {
     const [name, setName] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [countryCode, setCountryCode] = useState('+91');
+    const [mobile, setMobile] = useState('');
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
     const router = useRouter();
@@ -21,7 +23,7 @@ export default function RegisterPage() {
             const res = await fetch(`${API_BASE_URL}/api/auth/register`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name, email, password }),
+                body: JSON.stringify({ name, email, password, mobile, countryCode }),
             });
 
             const data = await res.json();
@@ -32,7 +34,7 @@ export default function RegisterPage() {
 
             // Save token and redirect
             localStorage.setItem('token', data.token);
-            router.push('/dashboard');
+            router.push('/plans');
         } catch (err: any) {
             setError(err.message);
         } finally {
@@ -75,6 +77,27 @@ export default function RegisterPage() {
                             placeholder="you@example.com"
                             required
                         />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-slate-300 mb-2">Mobile Number</label>
+                        <div className="flex gap-2">
+                            <input
+                                type="text"
+                                value={countryCode}
+                                onChange={(e) => setCountryCode(e.target.value)}
+                                className="w-24 bg-slate-900/50 border border-slate-700/50 rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-transparent transition-all shadow-inner"
+                                placeholder="+91"
+                                required
+                            />
+                            <input
+                                type="tel"
+                                value={mobile}
+                                onChange={(e) => setMobile(e.target.value)}
+                                className="flex-1 bg-slate-900/50 border border-slate-700/50 rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-transparent transition-all shadow-inner"
+                                placeholder="1234567890"
+                                required
+                            />
+                        </div>
                     </div>
                     <div>
                         <label className="block text-sm font-medium text-slate-300 mb-2">Password</label>
