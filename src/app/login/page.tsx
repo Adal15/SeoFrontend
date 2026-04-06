@@ -30,6 +30,27 @@ export default function LoginPage() {
 
             // Save token and redirect
             localStorage.setItem('token', data.token);
+            
+            // Check for pre-selected plan from /plans page
+            const selectedPlan = localStorage.getItem('selected_plan');
+            if (selectedPlan) {
+                try {
+                    await fetch(`${API_BASE_URL}/api/plans/select`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${data.token}`
+                        },
+                        body: JSON.stringify({ planType: selectedPlan }),
+                    });
+                    localStorage.removeItem('selected_plan');
+                } catch (planError) {
+                    console.error("Failed to apply pre-selected plan:", planError);
+                }
+                router.push('/dashboard');
+                return;
+            }
+
             if (data.hasPlan) {
                 router.push('/dashboard');
             } else {

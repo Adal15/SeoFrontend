@@ -1,6 +1,6 @@
 "use client";
 import { Chart as ChartJS, RadialLinearScale, ArcElement, Tooltip, Legend } from 'chart.js';
-import { PolarArea } from 'react-chartjs-2';
+import { PolarArea, Doughnut } from 'react-chartjs-2';
 import { use, useEffect, useState } from 'react';
 import { API_BASE_URL } from '../../../../config';
 
@@ -27,10 +27,11 @@ function StatusBadge({ status }: { status: StatusType }) {
 // ─── Audit row ────────────────────────────────────────────────────────────────
 
 function AuditRow({
-    label, status, summary, fix, children
+    label, status, summary, fix, children, canShowFix = true
 }: {
     label: string; status: StatusType; summary: string;
     fix?: string; children?: React.ReactNode;
+    canShowFix?: boolean;
 }) {
     const [open, setOpen] = useState(false);
     return (
@@ -46,7 +47,7 @@ function AuditRow({
                     </div>
                     {children && <div className="mt-3">{children}</div>}
                 </div>
-                {(status === 'fail' || status === 'warn') && fix && (
+                {(status === 'fail' || status === 'warn') && fix && canShowFix && (
                     <button
                         onClick={() => setOpen(o => !o)}
                         className="shrink-0 text-xs text-blue-400 hover:text-blue-300 border border-blue-500/30 rounded px-2 py-1 transition-colors whitespace-nowrap"
@@ -55,7 +56,7 @@ function AuditRow({
                     </button>
                 )}
             </div>
-            {open && fix && (
+            {open && fix && canShowFix && (
                 <div className="mx-1 mb-4 px-4 py-3 rounded-lg bg-blue-500/5 border border-blue-500/20 text-sm text-blue-200">
                     {fix}
                 </div>
@@ -300,12 +301,17 @@ export default function ReportDetail({ params }: { params: Promise<{ id: string 
     };
 
     // Chart
+    const isExpert = userPlanType === 'Expert Report';
     const chartData = {
-        labels: ['Technical', 'Performance', 'SEO Overall'],
+        labels: isExpert ? ['Technical', 'Performance', 'SEO Overall'] : ['Technical', 'SEO Overall'],
         datasets: [{
             label: 'Score',
-            data: [report.technicalScore || 0, report.performanceScore || 0, report.seoScore || 0],
-            backgroundColor: ['rgba(59,130,246,0.5)', 'rgba(245,158,11,0.5)', 'rgba(16,185,129,0.5)'],
+            data: isExpert 
+                ? [report.technicalScore || 0, report.performanceScore || 0, report.seoScore || 0] 
+                : [report.technicalScore || 0, report.seoScore || 0],
+            backgroundColor: isExpert 
+                ? ['rgba(59,130,246,0.5)', 'rgba(245,158,11,0.5)', 'rgba(16,185,129,0.5)']
+                : ['rgba(59,130,246,0.5)', 'rgba(16,185,129,0.5)'],
             borderWidth: 1,
             borderColor: 'rgba(255,255,255,0.1)',
         }],
@@ -349,7 +355,7 @@ export default function ReportDetail({ params }: { params: Promise<{ id: string 
                     </button>
                     <div className="flex gap-5 glass-panel px-5 py-3 rounded-xl">
                         <ScoreCircle score={report.technicalScore || 0} label="Technical" />
-                        <ScoreCircle score={report.performanceScore || 0} label="Performance" />
+                        {isExpert && <ScoreCircle score={report.performanceScore || 0} label="Performance" />}
                         <ScoreCircle score={report.seoScore || 0} label="Overall" />
                     </div>
                 </div>
@@ -400,6 +406,7 @@ export default function ReportDetail({ params }: { params: Promise<{ id: string 
                     label="Common Keywords"
                     status="info"
                     summary="Here are the most common keywords we found on the page:"
+                    canShowFix={isExpert}
                 >
                     <KeywordPills keywords={report.keywords || []} />
                 </AuditRow>
@@ -409,6 +416,7 @@ export default function ReportDetail({ params }: { params: Promise<{ id: string 
                     status={metaStatusToStatus(report.metaDescStatus || 'missing')}
                     summary={metaSummary()}
                     fix='Add <meta name="description" content="Your 150–160 character description here."> inside the <head> tag. Include your primary keyword naturally.'
+                    canShowFix={isExpert}
                 />
 
                 <AuditRow
@@ -416,6 +424,7 @@ export default function ReportDetail({ params }: { params: Promise<{ id: string 
                     status={report.h1Count === 1 ? 'pass' : report.h1Count === 0 ? 'fail' : 'warn'}
                     summary={h1Summary()}
                     fix="Ensure your page has exactly one <h1> tag containing your primary keyword. All other headings should use <h2> through <h6>."
+                    canShowFix={isExpert}
                 >
                     {report.h1Texts && report.h1Texts.length > 0 && (
                         <div className="bg-slate-950/70 border border-slate-700/40 rounded-lg p-3 mt-2 font-mono text-xs text-slate-300 space-y-1">
@@ -429,6 +438,7 @@ export default function ReportDetail({ params }: { params: Promise<{ id: string 
                     status={report.h2Count > 0 ? 'pass' : 'warn'}
                     summary={h2Summary()}
                     fix="Add <h2> tags to break your content into logical sections. Include relevant secondary keywords in your H2 headings."
+                    canShowFix={isExpert}
                 >
                     {report.h2Texts && report.h2Texts.length > 0 && (
                         <div className="bg-slate-950/70 border border-slate-700/40 rounded-lg p-3 mt-2 font-mono text-xs text-slate-300 space-y-1">
@@ -443,6 +453,7 @@ export default function ReportDetail({ params }: { params: Promise<{ id: string 
                     status={(report.missingAltImages?.length || 0) === 0 ? 'pass' : 'fail'}
                     summary={imgSummary()}
                     fix='Add descriptive alt text to every image: <img src="photo.jpg" alt="Description of what the image shows">. Be specific and include keywords where natural.'
+                    canShowFix={isExpert}
                 >
                     {report.missingAltImages && report.missingAltImages.slice(0, 3).map((img: any, i: number) => (
                         <CodeSnippet key={i} code={img.snippet} />
@@ -457,6 +468,7 @@ export default function ReportDetail({ params }: { params: Promise<{ id: string 
                     status={!report.keywords?.length ? 'info' : report.keywordsInTitle ? 'pass' : 'warn'}
                     summary={kwTitleSummary()}
                     fix={`Include your primary keyword "${report.keywords?.[0]?.word || ''}" in the <title> tag: <title>Primary Keyword — Brand Name</title>`}
+                    canShowFix={isExpert}
                 />
 
                 <AuditRow
@@ -464,6 +476,7 @@ export default function ReportDetail({ params }: { params: Promise<{ id: string 
                     status={!report.keywords?.length ? 'info' : !report.metaDescText ? 'fail' : report.keywordsInDesc ? 'pass' : 'warn'}
                     summary={kwDescSummary()}
                     fix={`Include your primary keyword "${report.keywords?.[0]?.word || ''}" naturally within your meta description.`}
+                    canShowFix={isExpert}
                 />
 
                 <AuditRow
@@ -471,6 +484,7 @@ export default function ReportDetail({ params }: { params: Promise<{ id: string 
                     status={report.linkRatioWarning ? 'warn' : 'pass'}
                     summary={linkSummary()}
                     fix="Add more internal links to other pages on your site. A good rule of thumb is at least 5–10 relevant internal links per page."
+                    canShowFix={isExpert}
                 >
                     <div className="grid grid-cols-2 gap-3 mt-3 max-w-xs">
                         <div className="bg-slate-800/50 p-3 rounded-lg border border-slate-700/30 text-center">
@@ -489,6 +503,7 @@ export default function ReportDetail({ params }: { params: Promise<{ id: string 
                     status={titleStatusToStatus(report.titleStatus || 'missing')}
                     summary={titleSummary()}
                     fix="Keep your title between 50–60 characters. Include your primary keyword near the beginning: <title>Primary Keyword | Brand Name</title>"
+                    canShowFix={isExpert}
                 />
 
                 <AuditRow
@@ -496,6 +511,7 @@ export default function ReportDetail({ params }: { params: Promise<{ id: string 
                     status={responsiveStatus()}
                     summary={responsiveSummary()}
                     fix='Add <meta name="viewport" content="width=device-width, initial-scale=1"> and ensure your CSS includes @media queries for different screen sizes.'
+                    canShowFix={isExpert}
                 />
 
                 <AuditRow
@@ -503,6 +519,7 @@ export default function ReportDetail({ params }: { params: Promise<{ id: string 
                     status={report.homepageReachable ? 'pass' : 'fail'}
                     summary={report.homepageReachable ? 'Homepage is reachable and returned a 200 OK response.' : 'Homepage could not be reached. Check your server configuration.'}
                     fix="Ensure your server is running and the URL is correct. Check for 5xx server errors or DNS configuration issues."
+                    canShowFix={isExpert}
                 />
             </Section>
 
@@ -514,6 +531,7 @@ export default function ReportDetail({ params }: { params: Promise<{ id: string 
                             label="Search Preview"
                             status="info"
                             summary="Here is how the site may appear in search results:"
+                            canShowFix={isExpert}
                         >
                             <SearchPreview title={report.titleText} desc={report.metaDescText} url={report.website?.url} />
                         </AuditRow>
@@ -523,6 +541,7 @@ export default function ReportDetail({ params }: { params: Promise<{ id: string 
                             status={report.canonicalUrl ? 'pass' : 'warn'}
                             summary={report.canonicalUrl ? `Canonical link found: ${report.canonicalUrl}` : 'No canonical link tag found on the page.'}
                             fix="Add <link rel='canonical' href='https://yourdomain.com/page-url'> to prevent duplicate content issues."
+                            canShowFix={isExpert}
                         />
 
                         <AuditRow
@@ -530,12 +549,14 @@ export default function ReportDetail({ params }: { params: Promise<{ id: string 
                             status={report.hasNoindex ? 'fail' : 'pass'}
                             summary={report.hasNoindex ? 'The page contains the noindex meta tag or header.' : 'The page is indexable (no noindex tag found).'}
                             fix="Remove the <meta name='robots' content='noindex'> tag if you want this page to be indexed by search engines."
+                            canShowFix={isExpert}
                         />
 
                         <AuditRow
                             label="Mobile Search Preview"
                             status="info"
                             summary="Here is how the site may appear in search results on a mobile device:"
+                            canShowFix={isExpert}
                         >
                             <SearchPreview title={report.titleText} desc={report.metaDescText} url={report.website?.url} mobile />
                         </AuditRow>
@@ -544,6 +565,7 @@ export default function ReportDetail({ params }: { params: Promise<{ id: string 
                             label="Mobile Snapshot"
                             status="info"
                             summary="Live mobile preview of your website:"
+                            canShowFix={isExpert}
                         >
                             <MobileSnapshot url={report.mobileSnapshotUrl} />
                         </AuditRow>
@@ -553,6 +575,7 @@ export default function ReportDetail({ params }: { params: Promise<{ id: string 
                             status={report.ogTags?.title ? 'pass' : 'warn'}
                             summary={report.ogTags?.title ? 'Opengraph meta tags are properly configured.' : 'Some Opengraph meta tags are missing.'}
                             fix="Add <meta property='og:title' content='...'> and other OG tags to optimize social media sharing."
+                            canShowFix={isExpert}
                         />
 
                         <AuditRow
@@ -560,6 +583,7 @@ export default function ReportDetail({ params }: { params: Promise<{ id: string 
                             status={report.hasSchemaData ? 'pass' : 'warn'}
                             summary={report.hasSchemaData ? 'Schema.org data found on the page.' : 'No Schema.org data found on the page.'}
                             fix="Use JSON-LD to add Schema documentation (like Article, Product, etc.) to your page."
+                            canShowFix={isExpert}
                         />
 
                         <AuditRow
@@ -567,6 +591,7 @@ export default function ReportDetail({ params }: { params: Promise<{ id: string 
                             status={report.hasSitemap ? 'pass' : 'fail'}
                             summary={report.hasSitemap ? 'Sitemap found successfully.' : 'No sitemaps found.'}
                             fix="Create a sitemap.xml file and list it in your robots.txt."
+                            canShowFix={isExpert}
                         />
 
                         <AuditRow
@@ -574,6 +599,7 @@ export default function ReportDetail({ params }: { params: Promise<{ id: string 
                             status={report.hasRobotsTxt ? 'pass' : 'fail'}
                             summary={report.hasRobotsTxt ? 'Robots.txt file found.' : 'Robots.txt file is missing or unavailable.'}
                             fix="Create a robots.txt file at the root of your website."
+                            canShowFix={isExpert}
                         />
 
                         <AuditRow
@@ -581,6 +607,7 @@ export default function ReportDetail({ params }: { params: Promise<{ id: string 
                             status={report.contentFreshness?.lastModified || report.contentFreshness?.ogUpdatedTime ? 'pass' : 'warn'}
                             summary={report.contentFreshness?.lastModified ? `Content refreshed on: ${new Date(report.contentFreshness.lastModified).toLocaleDateString()}` : 'No content freshness information found.'}
                             fix="Update your content regularly and ensure your server sends a Last-Modified header."
+                            canShowFix={isExpert}
                         />
 
                         <AuditRow
@@ -588,6 +615,7 @@ export default function ReportDetail({ params }: { params: Promise<{ id: string 
                             status={report.brokenLinks?.length === 0 ? 'pass' : 'warn'}
                             summary={report.brokenLinks?.length === 0 ? 'No broken internal links detected.' : `Found ${report.brokenLinks.length} broken link(s).`}
                             fix="Fix broken links to improve crawl efficiency and user experience."
+                            canShowFix={isExpert}
                         >
                             {report.brokenLinks && report.brokenLinks.length > 0 && (
                                 <div className="space-y-1 mt-2">
@@ -611,6 +639,7 @@ export default function ReportDetail({ params }: { params: Promise<{ id: string 
                                         : "Could not determine Google ranking. No primary keyword was identified on your page."))
                             }
                             fix="To improve your rank, focus on high-quality content, improving page speed, and building authoritative backlinks for your target keywords."
+                            canShowFix={isExpert}
                         />
                     </Section>
 
@@ -630,10 +659,150 @@ export default function ReportDetail({ params }: { params: Promise<{ id: string 
                                 status={passed ? 'pass' : 'fail'}
                                 summary={passed ? `${label} is properly configured.` : `${label} is missing or misconfigured.`}
                                 fix={fix}
+                                canShowFix={isExpert}
                             />
                         ))}
                     </Section>
-                </>
+
+                    {/* ── PERFORMANCE RESULTS Section ─────────────────────────────────────────────── */}
+                    {isExpert && (
+                        <Section title="Performance Results" color="bg-red-600/60">
+                            <div className="flex items-center gap-6 p-6 border-b border-slate-700/50 glass-panel mb-4 mx-4 mt-4">
+                                <div className="w-24 h-24 rounded-full border-8 border-blue-500 flex items-center justify-center text-4xl font-bold text-white shadow-[0_0_20px_rgba(59,130,246,0.4)]">
+                                    {report.performanceScore >= 80 ? 'A' : report.performanceScore >= 60 ? 'B' : report.performanceScore >= 40 ? 'C' : 'F'}
+                                </div>
+                                <div>
+                                    <h4 className="text-xl font-bold text-white mb-2">Your performance is {report.performanceScore >= 80 ? 'good' : 'fair'}</h4>
+                                    <p className="text-slate-400 text-sm max-w-2xl">Your page has performed well in our testing meaning it should be reasonably responsive for your users, but there is still room for improvement. Performance is important to ensure a good user experience, and reduced bounce rates.</p>
+                                </div>
+                            </div>
+
+                            <AuditRow
+                                label="Website Load Speed"
+                                status="pass"
+                                summary="Your page loads in a reasonable amount of time."
+                                canShowFix={isExpert}
+                            >
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 my-6 text-center">
+                                    <div className="bg-slate-900/40 p-6 rounded-xl border border-slate-700/30">
+                                        <h5 className="text-slate-400 text-sm font-bold uppercase tracking-widest mb-4">Server Response</h5>
+                                        <div className="text-3xl font-black text-white">{((report.performanceDetails?.serverResTime || 0) / 1000).toFixed(2)}s</div>
+                                    </div>
+                                    <div className="bg-slate-900/40 p-6 rounded-xl border border-slate-700/30">
+                                        <h5 className="text-slate-400 text-sm font-bold uppercase tracking-widest mb-4">All Page Content Loaded</h5>
+                                        <div className="text-3xl font-black text-white">{((report.performanceDetails?.contentLoadTime || 0) / 1000).toFixed(2)}s</div>
+                                    </div>
+                                    <div className="bg-slate-900/40 p-6 rounded-xl border border-slate-700/30">
+                                        <h5 className="text-slate-400 text-sm font-bold uppercase tracking-widest mb-4">All Page Scripts Complete</h5>
+                                        <div className="text-3xl font-black text-white">{((report.performanceDetails?.scriptsCompleteTime || 0) / 1000).toFixed(2)}s</div>
+                                    </div>
+                                </div>
+                            </AuditRow>
+
+                            <AuditRow label="Website Download Size" status="pass" summary="Your page's file size is reasonably low which is good for Page Load Speed." canShowFix={isExpert}>
+                                <div className="flex flex-col md:flex-row gap-8 items-center justify-center my-6">
+                                    <div className="w-48 h-48 relative">
+                                        <Doughnut 
+                                            data={{
+                                                labels: ['HTML', 'CSS', 'JS', 'Images', 'Other'],
+                                                datasets: [{
+                                                    data: [
+                                                        report.performanceDetails?.htmlSize || 0.1, 
+                                                        report.performanceDetails?.cssSize || 0.1, 
+                                                        report.performanceDetails?.jsSize || 0.5, 
+                                                        report.performanceDetails?.imgSize || 1.5, 
+                                                        report.performanceDetails?.otherSize || 0.1
+                                                    ],
+                                                    backgroundColor: ['#ef4444', '#0ea5e9', '#22c55e', '#3b82f6', '#94a3b8'],
+                                                    borderWidth: 0,
+                                                    cutout: '75%'
+                                                }]
+                                            }}
+                                            options={{ responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }}
+                                        />
+                                        <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                                            <div className="text-xl font-bold text-white">
+                                                {((report.performanceDetails?.htmlSize || 0) + (report.performanceDetails?.cssSize || 0) + (report.performanceDetails?.jsSize || 0) + (report.performanceDetails?.imgSize || 0)).toFixed(2)}MB
+                                            </div>
+                                            <div className="text-xs text-slate-500">Total</div>
+                                        </div>
+                                    </div>
+                                    <div className="space-y-2 text-sm">
+                                        <div className="flex justify-between w-48"><span className="text-red-400">● HTML</span> <span className="text-slate-300 font-mono">{(report.performanceDetails?.htmlSize || 0).toFixed(2)}MB</span></div>
+                                        <div className="flex justify-between w-48"><span className="text-sky-400">● CSS</span> <span className="text-slate-300 font-mono">{(report.performanceDetails?.cssSize || 0).toFixed(2)}MB</span></div>
+                                        <div className="flex justify-between w-48"><span className="text-green-400">● JS</span> <span className="text-slate-300 font-mono">{(report.performanceDetails?.jsSize || 0).toFixed(2)}MB</span></div>
+                                        <div className="flex justify-between w-48"><span className="text-blue-500">● Images</span> <span className="text-slate-300 font-mono">{(report.performanceDetails?.imgSize || 0).toFixed(2)}MB</span></div>
+                                        <div className="flex justify-between w-48"><span className="text-slate-400">● Other</span> <span className="text-slate-300 font-mono">{(report.performanceDetails?.otherSize || 0).toFixed(2)}MB</span></div>
+                                    </div>
+                                </div>
+                            </AuditRow>
+
+                            <AuditRow label="Compression Usage" status="pass" summary={`Your website appears to be using a reasonable level of compression (${report.performanceDetails?.compressionRate || '60'}%).`} canShowFix={isExpert} />
+                            
+                            <div className="p-6 bg-slate-900/50">
+                                <h4 className="text-white font-bold mb-6 pt-2">Resources Breakdown</h4>
+                                <div className="grid grid-cols-2 lg:grid-cols-6 text-center gap-4">
+                                    <div className="p-4 bg-slate-800/40 rounded-xl">
+                                        <div className="text-3xl font-black text-white">{report.resourcesBreakdown?.htmlNodes || 0}</div>
+                                        <div className="text-[10px] text-slate-500 mt-2 uppercase tracking-widest leading-tight">Total<br/>Objects</div>
+                                    </div>
+                                    <div className="p-4 bg-slate-800/40 rounded-xl">
+                                        <div className="text-3xl font-black text-red-500">1</div>
+                                        <div className="text-[10px] text-slate-500 mt-2 uppercase tracking-widest leading-tight">HTML<br/>Pages</div>
+                                    </div>
+                                    <div className="p-4 bg-slate-800/40 rounded-xl">
+                                        <div className="text-3xl font-black text-yellow-500">{report.resourcesBreakdown?.jsFiles || 0}</div>
+                                        <div className="text-[10px] text-slate-500 mt-2 uppercase tracking-widest leading-tight">JS<br/>Resources</div>
+                                    </div>
+                                    <div className="p-4 bg-slate-800/40 rounded-xl">
+                                        <div className="text-3xl font-black text-blue-500">{report.resourcesBreakdown?.cssFiles || 0}</div>
+                                        <div className="text-[10px] text-slate-500 mt-2 uppercase tracking-widest leading-tight">CSS<br/>Resources</div>
+                                    </div>
+                                    <div className="p-4 bg-slate-800/40 rounded-xl">
+                                        <div className="text-3xl font-black text-purple-500">{report.resourcesBreakdown?.imgFiles || 0}</div>
+                                        <div className="text-[10px] text-slate-500 mt-2 uppercase tracking-widest leading-tight">Number of<br/>Images</div>
+                                    </div>
+                                    <div className="p-4 bg-slate-800/40 rounded-xl">
+                                        <div className="text-3xl font-black text-slate-400">{report.resourcesBreakdown?.otherFiles || 0}</div>
+                                        <div className="text-[10px] text-slate-500 mt-2 uppercase tracking-widest leading-tight">Other<br/>Resources</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <AuditRow label="Google Accelerate Mobile Pages (AMP)" status={report.hasAMP ? 'pass' : 'fail'} summary={report.hasAMP ? 'This page appears to have AMP Enabled.' : 'This page does not appear to have AMP Enabled.'} canShowFix={isExpert} />
+                            <AuditRow label="JavaScript Errors" status={report.jsErrors === 0 ? 'pass' : 'fail'} summary={report.jsErrors === 0 ? 'Your page is not reporting any JavaScript errors.' : `Your page is reporting ${report.jsErrors} JavaScript errors.`} canShowFix={isExpert} />
+                            <AuditRow label="HTTP2 Usage" status={report.hasHttp2 ? 'pass' : 'fail'} summary={report.hasHttp2 ? 'Your website is using the recommended HTTP/2+ Protocol.' : 'Your website is not utilizing HTTP2.'} canShowFix={isExpert} />
+                            <AuditRow label="Optimize Images" status={report.optimizedImages ? 'pass' : 'warn'} summary={report.optimizedImages ? 'All of the images on your page appear to be optimized.' : 'Consider optimizing images further.'} canShowFix={isExpert} />
+                            <AuditRow label="Minification" status={report.minifiedAssets ? 'pass' : 'fail'} summary={report.minifiedAssets ? 'All your JavaScript and CSS files appear to be minified.' : 'Consider minifying assets to save bandwidth.'} canShowFix={isExpert} />
+                            
+                            <AuditRow label="Deprecated HTML" status={!report.deprecatedHtml?.length ? 'pass' : 'fail'} summary={!report.deprecatedHtml?.length ? 'No deprecated HTML tags found.' : 'Deprecated HTML tags have been found within your page.'} canShowFix={isExpert}>
+                                {report.deprecatedHtml?.length > 0 && (
+                                    <div className="overflow-x-auto mt-4 rounded-lg border border-slate-700/50">
+                                        <table className="w-full text-left text-sm whitespace-nowrap">
+                                            <thead className="bg-slate-800/80"><tr className="text-slate-400"><th className="px-4 py-3 font-semibold text-xs tracking-wider">DEPRECATED TAGS</th><th className="px-4 py-3 font-semibold text-xs tracking-wider">OCCURRENCES</th></tr></thead>
+                                            <tbody className="divide-y divide-slate-800 bg-slate-900/40 text-slate-300">
+                                                {report.deprecatedHtml.map((d: any, i: number) => <tr key={i} className="hover:bg-slate-800/30 transition-colors"><td className="px-4 py-3 font-mono text-red-400">{d.tag}</td><td className="px-4 py-3 text-white">{d.occurrences}</td></tr>)}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                )}
+                            </AuditRow>
+
+                            <AuditRow label="Inline Styles" status={!report.inlineStyles?.length ? 'pass' : 'fail'} summary={!report.inlineStyles?.length ? 'No inline styles found.' : 'Your page appears to be using Inline Styles.'} canShowFix={isExpert}>
+                                {report.inlineStyles?.length > 0 && (
+                                    <div className="overflow-x-auto mt-4 rounded-lg border border-slate-700/50">
+                                        <table className="w-full text-left text-sm">
+                                            <thead className="bg-slate-800/80"><tr className="text-slate-400"><th className="px-4 py-3 font-semibold text-xs tracking-wider">STYLE ATTRIBUTE</th></tr></thead>
+                                            <tbody className="divide-y divide-slate-800 bg-slate-900/40 text-slate-300">
+                                                {report.inlineStyles.map((s: any, i: number) => <tr key={i} className="hover:bg-slate-800/30 transition-colors"><td className="px-4 py-3 font-mono text-xs text-red-400 whitespace-pre-wrap leading-relaxed max-w-2xl">{s.style}</td></tr>)}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                )}
+                            </AuditRow>
+                        </Section>
+                    )}
+                 </>
             )}
 
         </div>

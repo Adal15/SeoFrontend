@@ -17,7 +17,7 @@ const plans = [
         name: 'Advanced Report',
         price: '$29/mo',
         description: 'Best for growing businesses needing deeper insights.',
-        features: ['Full SEO Audit', 'Up to 5 Websites', 'Daily Reports', 'Priority Email Support', 'Keyword Tracking'],
+        features: ['Full SEO Audit', 'Up to 5 Websites',  'Priority Email Support', 'Keyword Tracking'],
         gradient: 'from-indigo-500/20 to-purple-500/20',
         border: 'border-indigo-500/50',
         buttonClass: 'bg-indigo-600 hover:bg-indigo-500',
@@ -27,7 +27,7 @@ const plans = [
         name: 'Expert Report',
         price: '$99/mo',
         description: 'Comprehensive analysis for agencies and large enterprises.',
-        features: ['Advanced SEO Audit', 'Unlimited Websites', 'Real-time Reports', '24/7 Dedicated Support', 'Competitor Analysis', 'API Access'],
+        features: ['Advanced SEO Audit', '25 Websites', 'Real-time Reports', '24/7 Dedicated Support', 'Competitor Analysis', 'API Access'],
         gradient: 'from-amber-600/20 to-orange-600/20',
         border: 'border-amber-500/30',
         buttonClass: 'bg-amber-600 hover:bg-amber-500'
@@ -37,37 +37,82 @@ const plans = [
 export default function PlansPage() {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
+    const [showPayment, setShowPayment] = useState(false);
+    const [selectedPremiumPlan, setSelectedPremiumPlan] = useState('');
+    const [paymentMethod, setPaymentMethod] = useState('');
+    const [receipt, setReceipt] = useState<File | null>(null);
+    const [isSubmitted, setIsSubmitted] = useState(false);
     const router = useRouter();
 
-    useEffect(() => {
-        const token = localStorage.getItem('token');
-        if (!token) {
-            router.push('/login');
+    const initiatePlanSelection = (planName: string) => {
+        if (planName === 'Basic Report') {
+            handleSelectPlan(planName);
+        } else {
+            setSelectedPremiumPlan(planName);
+            setShowPayment(true);
+            setError('');
         }
-    }, [router]);
+    };
 
-    const handleSelectPlan = async (planName: string) => {
+    const handlePayment = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!paymentMethod) {
+            setError('Please select a payment method');
+            return;
+        }
+        if (paymentMethod === 'bank' && !receipt) {
+            setError('Please upload your payment receipt');
+            return;
+        }
+        handleSelectPlan(selectedPremiumPlan, receipt);
+    };
+
+    // No longer forced to login to view plans
+
+    const handleSelectPlan = async (planName: string, receiptFile: File | null = null) => {
         setLoading(true);
         setError('');
         const token = localStorage.getItem('token');
+        if (!token) {
+            localStorage.setItem('selected_plan', planName);
+            router.push('/login');
+            return;
+        }
 
         try {
+            const formData = new FormData();
+            formData.append('planType', planName);
+            if (receiptFile) {
+                formData.append('receipt', receiptFile);
+            }
+
             const res = await fetch(`${API_BASE_URL}/api/plans/select`, {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json',
                     'Authorization': `Bearer ${token}`
+                    // Note: Browser will automatically set multipart/form-data boundary
                 },
-                body: JSON.stringify({ planType: planName }),
+                body: formData,
             });
 
-            const data = await res.json();
-
-            if (!res.ok) {
-                throw new Error(data.message || 'Failed to select plan');
+            const contentType = res.headers.get('content-type');
+            if (contentType && contentType.includes('application/json')) {
+                const data = await res.json();
+                if (!res.ok) {
+                    throw new Error(data.message || 'Failed to select plan');
+                }
+                
+                if (receiptFile) {
+                    setIsSubmitted(true);
+                    setShowPayment(false);
+                } else {
+                    router.push('/dashboard');
+                }
+            } else {
+                const text = await res.text();
+                console.error('[PlansPage] Non-JSON response received:', text.substring(0, 200));
+                throw new Error('Server returned an invalid response. Please check your connection or contact support.');
             }
-
-            router.push('/dashboard');
         } catch (err: any) {
             console.error("Plan selection error:", err);
             setError(err.message);
@@ -80,16 +125,128 @@ export default function PlansPage() {
         <div className="min-h-screen py-20 px-4 flex flex-col items-center justify-center">
             <div className="max-w-6xl w-full text-center mb-16 animate-fade-in">
                 <h1 className="text-4xl md:text-5xl font-bold text-white mb-6" style={{ fontFamily: 'var(--font-outfit)' }}>
-                    Choose Your <span className="text-blue-400">SEO Service Plan</span>
+                    {showPayment ? 'Complete Your Payment' : <>Choose Your <span className="text-blue-400">SEO Service Plan</span></>}
                 </h1>
                 <p className="text-slate-400 text-lg max-w-2xl mx-auto">
-                    Select a plan that fits your business needs. You can change your plan at any time from your account settings.
+                    {showPayment ? `You have selected the ${selectedPremiumPlan}. Securely pay to activate your new limits.` : 'Select a plan that fits your business needs. You can change your plan at any time from your account settings.'}
                 </p>
                 {error && <div className="mt-8 bg-red-500/10 border border-red-500/20 text-red-400 p-3 rounded-lg text-sm max-w-md mx-auto">{error}</div>}
+                {isSubmitted && <div className="mt-8 bg-green-500/10 border border-green-500/20 text-green-400 p-4 rounded-lg text-sm max-w-md mx-auto font-medium">Your request has been submitted! Your upgradation will be approved by admin soon.</div>}
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl w-full">
-                {plans.map((plan, index) => (
+            {showPayment ? (
+                <div className="max-w-md w-full glass-panel p-8 relative overflow-hidden animate-slide-up">
+                    <div className="absolute top-[-50px] right-[-50px] w-40 h-40 bg-indigo-500/10 rounded-full blur-[50px] pointer-events-none"></div>
+                    
+                    <h3 className="text-2xl font-bold text-white mb-6 border-b border-slate-700/50 pb-4">Payment Details</h3>
+                    <form onSubmit={handlePayment} className="space-y-6 relative z-10">
+                        <div className="space-y-4">
+                            <label className="block text-sm font-medium text-slate-300">Select Payment Method</label>
+                            
+                            <div className={`p-4 rounded-lg border opacity-50 cursor-not-allowed transition-all border-slate-700 bg-slate-800/50`}>
+                                <div className="flex items-center justify-between gap-3">
+                                    <div className="flex items-center gap-3">
+                                        <div className={`w-5 h-5 rounded-full border border-slate-500`}>
+                                        </div>
+                                        <span className="text-slate-400 font-medium">Credit / Debit Card</span>
+                                    </div>
+                                    <span className="text-[10px] bg-red-500/20 text-red-400 px-2 py-0.5 rounded border border-red-500/30 font-bold uppercase tracking-wider">Currently not working</span>
+                                </div>
+                            </div>
+                            
+
+                            
+                            <div className={`p-4 rounded-lg border opacity-50 cursor-not-allowed transition-all border-slate-700 bg-slate-800/50`}>
+                                <div className="flex items-center justify-between gap-3">
+                                    <div className="flex items-center gap-3">
+                                        <div className={`w-5 h-5 rounded-full border border-slate-500`}>
+                                        </div>
+                                        <span className="text-slate-400 font-medium">UPI (GPay, PhonePe, Paytm)</span>
+                                    </div>
+                                    <span className="text-[10px] bg-red-500/20 text-red-400 px-2 py-0.5 rounded border border-red-500/30 font-bold uppercase tracking-wider">Currently not working</span>
+                                </div>
+                            </div>
+
+
+
+                            <div className={`p-4 rounded-lg border cursor-pointer transition-all ${paymentMethod === 'bank' ? 'border-indigo-500 bg-indigo-500/10' : 'border-slate-700 hover:border-slate-500 bg-slate-800/50'}`} onClick={() => setPaymentMethod('bank')}>
+                                <div className="flex items-center gap-3">
+                                    <div className={`w-5 h-5 rounded-full border flex items-center justify-center ${paymentMethod === 'bank' ? 'border-indigo-500' : 'border-slate-500'}`}>
+                                        {paymentMethod === 'bank' && <div className="w-2.5 h-2.5 bg-indigo-500 rounded-full"></div>}
+                                    </div>
+                                    <span className="text-white font-medium">Direct Bank Transfer (UAE)</span>
+                                </div>
+                            </div>
+
+                            {paymentMethod === 'bank' && (
+                                <div className="p-4 bg-slate-900/60 border border-slate-700/50 rounded-xl animate-fade-in mt-2 space-y-4">
+                                    <p className="text-[10px] text-indigo-400 font-bold uppercase tracking-widest mb-2">Account Details</p>
+                                    
+                                    <div className="grid grid-cols-1 gap-3">
+                                        <div>
+                                            <label className="block text-[10px] text-slate-500 uppercase font-medium">Account Holder Name</label>
+                                            <p className="text-sm text-white font-semibold">JTS Middle East FZE</p>
+                                        </div>
+                                        <div>
+                                            <label className="block text-[10px] text-slate-500 uppercase font-medium">Account Currency</label>
+                                            <p className="text-sm text-white font-semibold">AED</p>
+                                        </div>
+                                        <div className="bg-slate-950/40 p-2.5 rounded border border-slate-800/50">
+                                            <label className="block text-[10px] text-slate-500 uppercase font-medium mb-1 text-slate-500">IBAN</label>
+                                            <p className="text-[11px] text-indigo-300 font-mono break-all leading-relaxed tracking-wider">AE130860000009914301354</p>
+                                        </div>
+                                        <div className="flex gap-4">
+                                            <div className="flex-1">
+                                                <label className="block text-[10px] text-slate-500 uppercase font-medium">BIC/SWIFT</label>
+                                                <p className="text-xs text-white font-mono uppercase">WIOBAEADXXX</p>
+                                            </div>
+                                            <div className="flex-1">
+                                                <label className="block text-[10px] text-slate-500 uppercase font-medium">Account Number</label>
+                                                <p className="text-xs text-white font-mono">9914301354</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div className="pt-2 border-t border-slate-800/50 mt-2">
+                                        <p className="text-[10px] text-slate-400 italic">Please include your name or email in the transfer notes for faster verification.</p>
+                                    </div>
+
+                                    <div className="pt-4 space-y-3">
+                                        <label className="block text-xs font-medium text-slate-300">Upload Receipt (PDF or Image)</label>
+                                        <div className="relative group">
+                                            <input 
+                                                type="file" 
+                                                accept=".pdf,.jpg,.jpeg,.png"
+                                                onChange={(e) => setReceipt(e.target.files ? e.target.files[0] : null)}
+                                                className="w-full text-xs text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-indigo-600 file:text-white hover:file:bg-indigo-500 cursor-pointer bg-slate-900/50 rounded-lg p-2 border border-slate-700/50"
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="pt-4 flex gap-4">
+                            <button
+                                type="button"
+                                onClick={() => setShowPayment(false)}
+                                className="w-1/3 py-3 rounded-xl border border-slate-700 text-slate-300 hover:bg-slate-800 transition-colors"
+                            >
+                                Back
+                            </button>
+                             <button
+                                type="submit"
+                                disabled={loading}
+                                className={`w-2/3 py-3 rounded-xl font-bold text-white transition-all duration-300 bg-indigo-600 hover:bg-indigo-500 shadow-[0_0_20px_rgba(79,70,229,0.3)] disabled:opacity-50 flex items-center justify-center`}
+                            >
+                                {loading ? 'Processing...' : (paymentMethod === 'bank' ? 'Submit for Approval' : 'Pay & Upgrade')}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            ) : (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl w-full">
+                    {plans.map((plan, index) => (
                     <div 
                         key={plan.name}
                         className={`glass-panel relative p-8 flex flex-col h-full transform transition-all duration-300 hover:-translate-y-2 hover:shadow-[0_20px_40px_rgba(0,0,0,0.3)] animate-slide-up`}
@@ -125,7 +282,7 @@ export default function PlansPage() {
 
                         <button
                             disabled={loading}
-                            onClick={() => handleSelectPlan(plan.name)}
+                            onClick={() => initiatePlanSelection(plan.name)}
                             className={`relative z-10 w-full py-4 rounded-xl font-bold text-white transition-all duration-300 transform active:scale-95 shadow-lg ${plan.buttonClass} disabled:opacity-50 disabled:cursor-not-allowed`}
                         >
                             {loading ? (
@@ -143,6 +300,7 @@ export default function PlansPage() {
                     </div>
                 ))}
             </div>
+            )}
 
             <p className="mt-12 text-slate-500 text-sm animate-fade-in" style={{ animationDelay: '600ms' }}>
                 All plans include a 14-day money back guarantee. No credit card required for Basic Report.

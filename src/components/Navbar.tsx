@@ -44,7 +44,7 @@ export default function Navbar() {
                     </div>
                     <div className="hidden md:flex items-center space-x-8">
                         <Link href="/#features" className="text-sm font-medium text-slate-300 hover:text-white transition-colors duration-200">Features</Link>
-                        <Link href="/pricing" className="text-sm font-medium text-slate-300 hover:text-white transition-colors duration-200">Pricing</Link>
+                        <Link href="/plans" className="text-sm font-medium text-slate-300 hover:text-white transition-colors duration-200">Plans</Link>
                         
                         {isLoggedIn ? (
                             <>
@@ -61,7 +61,7 @@ export default function Navbar() {
                         ) : (
                             <>
                                 <Link href="/login" className="text-sm font-medium text-slate-300 hover:text-white transition-colors duration-200">Login</Link>
-                                <Link href="/register" className="bg-blue-600 hover:bg-blue-500 text-white px-6 py-2.5 rounded-full text-sm font-semibold transition-all duration-300 shadow-[0_0_15px_rgba(37,99,235,0.4)] hover:shadow-[0_0_25px_rgba(37,99,235,0.6)]">
+                                <Link href="/plans" className="bg-blue-600 hover:bg-blue-500 text-white px-6 py-2.5 rounded-full text-sm font-semibold transition-all duration-300 shadow-[0_0_15px_rgba(37,99,235,0.4)] hover:shadow-[0_0_25px_rgba(37,99,235,0.6)]">
                                     Get Started
                                 </Link>
                             </>
