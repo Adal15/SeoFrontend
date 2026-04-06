@@ -714,11 +714,10 @@ export default function ReportDetail({ params }: { params: Promise<{ id: string 
                                                         report.performanceDetails?.otherSize || 0.1
                                                     ],
                                                     backgroundColor: ['#ef4444', '#0ea5e9', '#22c55e', '#3b82f6', '#94a3b8'],
-                                                    borderWidth: 0,
-                                                    cutout: '75%'
+                                                    borderWidth: 0
                                                 }]
                                             }}
-                                            options={{ responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }}
+                                            options={{ cutout: '75%', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }}
                                         />
                                         <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
                                             <div className="text-xl font-bold text-white">
