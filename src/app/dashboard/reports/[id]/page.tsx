@@ -129,11 +129,12 @@ function SearchPreview({ title, desc, url, mobile = false }: { title: string; de
 
 function MobileSnapshot({ url }: { url: string }) {
     if (!url) return null;
+    const fullUrl = url.startsWith('http') ? url : `${API_BASE_URL}${url}`;
     return (
         <div className="flex flex-col items-center bg-slate-900/40 rounded-xl p-6 border border-slate-700/30 w-full">
             <div className="relative w-[240px] h-[480px] bg-black rounded-[2.5rem] border-[8px] border-slate-800 shadow-2xl overflow-hidden">
                  <div className="absolute top-0 left-1/2 -translate-x-1/2 w-24 h-5 bg-slate-800 rounded-b-xl z-20"></div>
-                 <img src={url} alt="Mobile Snapshot" className="w-full h-full object-cover" />
+                 <img src={fullUrl} alt="Mobile Snapshot" className="w-full h-full object-cover" />
             </div>
             <p className="text-slate-500 text-[10px] mt-4 italic uppercase tracking-widest">Mobile Live Preview</p>
         </div>
@@ -169,11 +170,13 @@ export default function ReportDetail({ params }: { params: Promise<{ id: string 
     const [error, setError] = useState('');
     const [showOnlyBasicSEO, setShowOnlyBasicSEO] = useState(false);
     const [userPlanType, setUserPlanType] = useState('Basic Report');
+    const [showAllH2, setShowAllH2] = useState(false);
+    const [showAllImages, setShowAllImages] = useState(false);
 
     useEffect(() => {
         const fetchReport = async () => {
             try {
-                const token = localStorage.getItem('token');
+                const token = localStorage.getItem('token') || localStorage.getItem('adminToken');
                 const res = await fetch(`${API_BASE_URL}/api/reports/${resolvedParams.id}`, {
                     headers: { Authorization: `Bearer ${token}` }
                 });
@@ -330,10 +333,21 @@ export default function ReportDetail({ params }: { params: Promise<{ id: string 
     };
 
     return (
-        <div className="w-full max-w-6xl mx-auto animate-fade-in relative z-10">
+        <div className="w-full max-w-6xl mx-auto animate-fade-in relative z-10 print:max-w-full">
+            {/* Print-Only Header Branding */}
+            <div className="hidden print:flex items-center justify-between mb-10 border-b border-slate-700 pb-6">
+                <div className="text-3xl font-bold tracking-tight" style={{ fontFamily: 'var(--font-outfit)' }}>
+                    <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-violet-500">JTS SEO</span>
+                    <span className="text-white ml-2 text-2xl uppercase tracking-widest">Analyzer</span>
+                </div>
+                <div className="text-right">
+                    <p className="text-slate-400 text-xs font-medium uppercase tracking-widest">Comprehensive SEO Audit Report</p>
+                    <p className="text-blue-400 text-sm font-bold mt-1">{new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
+                </div>
+            </div>
 
             {/* Header */}
-            <div className="flex items-center justify-between mb-8 flex-wrap gap-4">
+            <div className="flex items-center justify-between mb-8 flex-wrap gap-4 print:hidden">
                 <div>
                     <h1 className="text-3xl font-bold text-white mb-1" style={{ fontFamily: 'var(--font-outfit)' }}>SEO Audit Report</h1>
                     <p className="text-slate-400">Target: <span className="text-blue-400 font-medium">{report.website?.url || 'Unknown'}</span></p>
@@ -361,8 +375,18 @@ export default function ReportDetail({ params }: { params: Promise<{ id: string 
                 </div>
             </div>
 
+            {/* Print Header (Target Info Only) */}
+            <div className="hidden print:block mb-8">
+                <h1 className="text-4xl font-black text-white mb-2" style={{ fontFamily: 'var(--font-outfit)' }}>SEO Audit Report</h1>
+                <div className="flex items-center gap-4 text-slate-400">
+                    <span>Target: <span className="text-blue-400 font-bold underline">{report.website?.url || 'Unknown'}</span></span>
+                    <span className="h-4 w-[1px] bg-slate-700"></span>
+                    <span className="text-xs uppercase tracking-widest font-bold">Health Score: {(report.seoScore || 0)}%</span>
+                </div>
+            </div>
+
             {/* Score + Issues overview */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8 print:gap-4">
                 <div className="glass-panel p-6 flex flex-col items-center justify-center">
                     <h3 className="text-base font-bold text-white mb-4 w-full text-left">Category Breakdown</h3>
                     <div className="w-full max-w-[220px]">
@@ -442,8 +466,15 @@ export default function ReportDetail({ params }: { params: Promise<{ id: string 
                 >
                     {report.h2Texts && report.h2Texts.length > 0 && (
                         <div className="bg-slate-950/70 border border-slate-700/40 rounded-lg p-3 mt-2 font-mono text-xs text-slate-300 space-y-1">
-                            {report.h2Texts.slice(0, 6).map((t: string, i: number) => <div key={i}>{t}</div>)}
-                            {report.h2Texts.length > 6 && <div className="text-slate-500">…and {report.h2Texts.length - 6} more</div>}
+                            {(showAllH2 ? report.h2Texts : report.h2Texts.slice(0, 6)).map((t: string, i: number) => <div key={i}>{t}</div>)}
+                            {report.h2Texts.length > 6 && (
+                                <button 
+                                    onClick={() => setShowAllH2(!showAllH2)}
+                                    className="text-blue-400 hover:text-blue-300 transition-colors mt-2 font-bold flex items-center gap-1 cursor-pointer"
+                                >
+                                    {showAllH2 ? "Show less ▲" : `…and ${report.h2Texts.length - 6} more ▼`}
+                                </button>
+                            )}
                         </div>
                     )}
                 </AuditRow>
@@ -455,11 +486,16 @@ export default function ReportDetail({ params }: { params: Promise<{ id: string 
                     fix='Add descriptive alt text to every image: <img src="photo.jpg" alt="Description of what the image shows">. Be specific and include keywords where natural.'
                     canShowFix={isExpert}
                 >
-                    {report.missingAltImages && report.missingAltImages.slice(0, 3).map((img: any, i: number) => (
+                    {(showAllImages ? report.missingAltImages : report.missingAltImages?.slice(0, 3))?.map((img: any, i: number) => (
                         <CodeSnippet key={i} code={img.snippet} />
                     ))}
                     {(report.missingAltImages?.length || 0) > 3 && (
-                        <p className="text-slate-500 text-xs mt-1">…and {report.missingAltImages.length - 3} more images</p>
+                        <button 
+                            onClick={() => setShowAllImages(!showAllImages)}
+                            className="text-blue-400 hover:text-blue-300 transition-colors mt-2 text-xs font-bold flex items-center gap-1 cursor-pointer"
+                        >
+                            {showAllImages ? "Show fewer images ▲" : `…and ${report.missingAltImages.length - 3} more images ▼`}
+                        </button>
                     )}
                 </AuditRow>
 

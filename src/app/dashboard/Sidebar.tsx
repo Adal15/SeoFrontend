@@ -39,7 +39,7 @@ export default function Sidebar() {
     const isActive = (path: string) => pathname === path;
 
     return (
-        <aside className="w-64 border-r border-slate-800/50 glass-panel rounded-none border-y-0 border-l-0 hidden md:flex flex-col mt-0 pt-0">
+        <aside className="w-64 border-r border-slate-800/50 glass-panel rounded-none border-y-0 border-l-0 hidden md:flex flex-col mt-0 pt-0 print:hidden">
             <div className="px-4 py-8 flex flex-col gap-2 flex-grow">
                 <Link href="/dashboard" className={`px-4 py-3 rounded-lg font-medium transition-all ${isActive('/dashboard') ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' : 'text-slate-400 hover:bg-white/5 hover:text-white border border-transparent'}`}>
                     Overview

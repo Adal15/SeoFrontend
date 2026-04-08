@@ -56,14 +56,14 @@ export default function AllUsersPage() {
             const finalValue = editValue === '' ? null : Number(editValue);
             const res = await fetch(`${API_BASE_URL}/api/admin/users/${userId}/limit`, {
                 method: 'PUT',
-                headers: { 
+                headers: {
                     'Authorization': `Bearer ${token}`,
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({ scanLimitOverride: finalValue })
             });
             if (!res.ok) throw new Error('Failed to update limit');
-            
+
             // Re-fetch users to confirm persistence and update table
             await fetchUsers();
             setEditingId(null);
@@ -153,9 +153,9 @@ export default function AllUsersPage() {
                                                 <div className="flex flex-col gap-1 mt-1 p-2 bg-amber-500/5 border border-amber-500/20 rounded">
                                                     <span className="text-[9px] text-amber-500 font-bold uppercase">Pending: {user.pendingPlanType}</span>
                                                     <div className="flex gap-2">
-                                                        <a 
-                                                            href={`${API_BASE_URL}${user.receiptUrl}`} 
-                                                            target="_blank" 
+                                                        <a
+                                                            href={`${API_BASE_URL}${user.receiptUrl}`}
+                                                            target="_blank"
                                                             rel="noopener noreferrer"
                                                             className="text-[9px] text-blue-400 hover:underline font-bold"
                                                         >
@@ -171,23 +171,23 @@ export default function AllUsersPage() {
                                     <td className="py-5 px-4">
                                         {editingId === user._id ? (
                                             <div className="flex items-center gap-2">
-                                                <input 
-                                                    type="number" 
-                                                    value={editValue} 
+                                                <input
+                                                    type="number"
+                                                    value={editValue}
                                                     onChange={e => setEditValue(e.target.value)}
                                                     placeholder="Default"
                                                     className="w-20 bg-slate-800/50 border border-slate-700 rounded px-2 py-1 text-xs text-white"
                                                     min="0"
                                                 />
-                                                    <button 
-                                                        onClick={() => handleSaveLimit(user._id)} 
-                                                        disabled={isSaving}
-                                                        className={`text-green-400 text-[10px] hover:underline font-medium ${isSaving ? 'opacity-50 cursor-not-allowed' : ''}`}
-                                                    >
-                                                        {isSaving ? 'Saving...' : 'Save'}
-                                                    </button>
-                                                    <button onClick={() => setEditingId(null)} disabled={isSaving} className="text-slate-400 text-[10px] hover:underline font-medium">Cancel</button>
-                                                </div>
+                                                <button
+                                                    onClick={() => handleSaveLimit(user._id)}
+                                                    disabled={isSaving}
+                                                    className={`text-green-400 text-[10px] hover:underline font-medium ${isSaving ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                                >
+                                                    {isSaving ? 'Saving...' : 'Save'}
+                                                </button>
+                                                <button onClick={() => setEditingId(null)} disabled={isSaving} className="text-slate-400 text-[10px] hover:underline font-medium">Cancel</button>
+                                            </div>
                                         ) : (
                                             <div className="flex items-center gap-2">
                                                 <span className="text-slate-300 text-xs font-mono">

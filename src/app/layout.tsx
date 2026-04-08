@@ -21,7 +21,7 @@ export default function RootLayout({
     <html lang="en" className={`${inter.variable} ${outfit.variable}`}>
       <body className="font-sans antialiased text-slate-50 bg-slate-900">
         <Navbar />
-        <main className="min-h-screen pt-20">
+        <main className="min-h-screen pt-20 print:pt-0">
           {children}
         </main>
         <Footer />

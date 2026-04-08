@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from 'react';
 import { API_BASE_URL } from '../../../config';
+import Link from 'next/link';
 
 interface Interaction {
     _id: string;
@@ -86,12 +87,14 @@ export default function AdminDashboard() {
                         <tbody className="text-sm">
                             {stats?.recentReports.map(report => (
                                 <tr key={report._id} className="border-b border-slate-900/50 hover:bg-white/[0.02] transition-colors group">
+                                    <td className="py-5 px-4 font-medium text-white">{report.user?.name || "Anonymous User"} <span className="text-xs font-normal text-slate-500 block">{report.user?.email}</span></td>
                                     <td className="py-5 px-4">
-                                        <div className="text-white font-medium">{report.user?.name || 'Deleted User'}</div>
-                                        <div className="text-slate-500 text-xs">{report.user?.email || 'Unknown'}</div>
-                                    </td>
-                                    <td className="py-5 px-4 text-blue-400 font-mono text-xs opacity-80 decoration-slate-600 underline-offset-4 hover:underline cursor-pointer">
-                                        {report.website?.url || 'URL Removed'}
+                                        <Link 
+                                            href={`/admin/reports/${report._id}`}
+                                            className="text-blue-400 font-mono text-xs opacity-80 decoration-slate-600 underline-offset-4 hover:underline hover:opacity-100 transition-all"
+                                        >
+                                            {report.website?.url || "N/A"}
+                                        </Link>
                                     </td>
                                     <td className="py-5 px-4">
                                         <div className="flex gap-2">

@@ -65,3 +65,52 @@ body::before {
 ::-webkit-scrollbar-thumb:hover {
   background: #475569;
 }
+
+@media print {
+  /* Force hide all layout elements */
+  nav, aside, footer, header, .print-hidden, [role="navigation"] {
+    display: none !important;
+    visibility: hidden !important;
+    height: 0 !important;
+    width: 0 !important;
+    overflow: hidden !important;
+    position: absolute !important;
+    pointer-events: none !important;
+  }
+  
+  body, html {
+    background: #0f172a !important;
+    color: #f8fafc !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    width: 100% !important;
+    position: static !important;
+    overflow: visible !important;
+  }
+
+  main {
+    padding-top: 0 !important;
+    margin-top: 0 !important;
+    position: static !important;
+  }
+
+  .glass-panel {
+    background: rgba(30, 41, 59, 0.9) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    box-shadow: none !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+  
+  @page {
+    margin: 1.5cm;
+    size: auto;
+  }
+}
