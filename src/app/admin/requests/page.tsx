@@ -15,8 +15,20 @@ interface User {
     createdAt: string;
 }
 
+interface HistoryEntry {
+    _id: string;
+    userName: string;
+    userEmail: string;
+    previousPlan: string;
+    requestedPlan: string;
+    status: 'approved' | 'rejected';
+    receiptUrl: string;
+    createdAt: string;
+}
+
 export default function UpgradeRequestsPage() {
     const [users, setUsers] = useState<User[]>([]);
+    const [history, setHistory] = useState<HistoryEntry[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
 
@@ -41,6 +53,25 @@ export default function UpgradeRequestsPage() {
         }
     };
 
+    const fetchHistory = async () => {
+        try {
+            const token = localStorage.getItem('adminToken');
+            const res = await fetch(`${API_BASE_URL}/api/admin/upgrade-history`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+
+            if (!res.ok) {
+                console.error('Failed to fetch upgrade history:', res.status);
+                return;
+            }
+
+            const data: HistoryEntry[] = await res.json();
+            setHistory(data);
+        } catch (err: any) {
+            console.error(err);
+        }
+    };
+
     const handleApprovePlan = async (userId: string) => {
         if (!confirm('Are you sure you want to approve this plan upgrade?')) return;
         try {
@@ -52,6 +83,7 @@ export default function UpgradeRequestsPage() {
             if (!res.ok) throw new Error('Failed to approve plan');
             alert('Plan approved successfully');
             fetchRequests();
+            fetchHistory();
         } catch (err) {
             console.error(err);
             alert('Failed to approve plan');
@@ -69,6 +101,7 @@ export default function UpgradeRequestsPage() {
             if (!res.ok) throw new Error('Failed to reject plan');
             alert('Plan request rejected');
             fetchRequests();
+            fetchHistory();
         } catch (err) {
             console.error(err);
             alert('Failed to reject plan');
@@ -77,6 +110,7 @@ export default function UpgradeRequestsPage() {
 
     useEffect(() => {
         fetchRequests();
+        fetchHistory();
     }, []);
 
     if (loading) return <div className="text-slate-400">Loading upgrade requests...</div>;
@@ -167,6 +201,86 @@ export default function UpgradeRequestsPage() {
                     </div>
                 </section>
             )}
+
+            <hr className="border-slate-800/50" />
+
+            <section className="space-y-6">
+                <header>
+                    <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                        <svg className="w-5 h-5 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        Upgrade History
+                    </h2>
+                    <p className="text-slate-500 text-sm">Past approvals and rejections</p>
+                </header>
+
+                <div className="glass-panel border-slate-800/50 overflow-hidden">
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-left border-collapse">
+                            <thead>
+                                <tr className="border-b border-slate-800/50 text-slate-500 text-[10px] uppercase tracking-wider">
+                                    <th className="py-3 px-4 font-medium">Date</th>
+                                    <th className="py-3 px-4 font-medium">User</th>
+                                    <th className="py-3 px-4 font-medium">Previous Plan</th>
+                                    <th className="py-3 px-4 font-medium">Requested Plan</th>
+                                    <th className="py-3 px-4 font-medium">Status</th>
+                                    <th className="py-3 px-4 font-medium">Proof</th>
+                                </tr>
+                            </thead>
+                            <tbody className="text-xs text-slate-400">
+                                {history.length === 0 ? (
+                                    <tr>
+                                        <td colSpan={6} className="py-10 text-center text-slate-600">No history available yet.</td>
+                                    </tr>
+                                ) : (
+                                    history.map(item => (
+                                        <tr key={item._id} className="border-b border-slate-900/50 hover:bg-white/[0.01] transition-colors">
+                                            <td className="py-4 px-4 font-mono text-[10px]">
+                                                {new Date(item.createdAt).toLocaleDateString()}
+                                                <div className="text-[8px] opacity-50">{new Date(item.createdAt).toLocaleTimeString()}</div>
+                                            </td>
+                                            <td className="py-4 px-4">
+                                                <div className="flex flex-col">
+                                                    <span className="text-slate-300 font-medium">{item.userName}</span>
+                                                    <span className="text-[10px] opacity-50">{item.userEmail}</span>
+                                                </div>
+                                            </td>
+                                            <td className="py-4 px-4">
+                                                <span className="text-slate-500">{item.previousPlan}</span>
+                                            </td>
+                                            <td className="py-4 px-4">
+                                                <span className="text-slate-300">{item.requestedPlan}</span>
+                                            </td>
+                                            <td className="py-4 px-4">
+                                                <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold uppercase ${
+                                                    item.status === 'approved' 
+                                                        ? 'bg-green-500/10 text-green-500 border border-green-500/20' 
+                                                        : 'bg-red-500/10 text-red-500 border border-red-500/20'
+                                                }`}>
+                                                    {item.status}
+                                                </span>
+                                            </td>
+                                            <td className="py-4 px-4">
+                                                {item.receiptUrl && (
+                                                    <a 
+                                                        href={`${API_BASE_URL}${item.receiptUrl}`} 
+                                                        target="_blank" 
+                                                        rel="noopener noreferrer"
+                                                        className="text-blue-400 hover:text-blue-300 transition-colors"
+                                                    >
+                                                        View Proof
+                                                    </a>
+                                                )}
+                                            </td>
+                                        </tr>
+                                    ))
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
         </div>
     );
 }

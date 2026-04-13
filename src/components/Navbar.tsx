@@ -2,15 +2,33 @@
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { API_BASE_URL } from '../config';
 
 export default function Navbar() {
     const [isLoggedIn, setIsLoggedIn] = useState(false);
+    const [userName, setUserName] = useState<string | null>(null);
     const router = useRouter();
 
     useEffect(() => {
-        const checkAuth = () => {
+        const checkAuth = async () => {
             const token = localStorage.getItem('token');
             setIsLoggedIn(!!token);
+
+            if (token && !userName) {
+                try {
+                    const res = await fetch(`${API_BASE_URL}/api/plans/current`, {
+                        headers: { Authorization: `Bearer ${token}` }
+                    });
+                    if (res.ok) {
+                        const data = await res.json();
+                        setUserName(data.user?.name || 'Account');
+                    }
+                } catch (error) {
+                    console.error("Failed to fetch user name:", error);
+                }
+            } else if (!token) {
+                setUserName(null);
+            }
         };
 
         checkAuth();
@@ -18,17 +36,18 @@ export default function Navbar() {
         window.addEventListener('storage', checkAuth);
         
         // Custom event for same-window updates if needed
-        const interval = setInterval(checkAuth, 1000);
+        const interval = setInterval(checkAuth, 2000);
         
         return () => {
             window.removeEventListener('storage', checkAuth);
             clearInterval(interval);
         };
-    }, []);
+    }, [userName]);
 
     const handleLogout = () => {
         localStorage.removeItem('token');
         setIsLoggedIn(false);
+        setUserName(null);
         router.push('/login');
     };
 
@@ -48,12 +67,15 @@ export default function Navbar() {
                         
                         {isLoggedIn ? (
                             <>
-                                <button 
-                                    onClick={handleLogout}
-                                    className="text-sm font-medium text-red-400 hover:text-red-300 transition-colors duration-200"
+                                <Link 
+                                    href="/dashboard/account"
+                                    className="text-sm font-semibold text-blue-400 hover:text-blue-300 transition-colors duration-200 flex items-center gap-2"
                                 >
-                                    Logout
-                                </button>
+                                    <div className="w-8 h-8 rounded-full bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-[10px] text-blue-400">
+                                        {userName ? userName.charAt(0).toUpperCase() : 'U'}
+                                    </div>
+                                    {userName || 'Account'}
+                                </Link>
                                 <Link href="/dashboard" className="bg-blue-600 hover:bg-blue-500 text-white px-6 py-2.5 rounded-full text-sm font-semibold transition-all duration-300 shadow-[0_0_15px_rgba(37,99,235,0.4)] hover:shadow-[0_0_25px_rgba(37,99,235,0.6)]">
                                     Dashboard
                                 </Link>

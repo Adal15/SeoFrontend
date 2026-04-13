@@ -43,6 +43,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                         <Link href="/admin/users" className={`px-4 py-3 rounded-lg transition-all ${pathname === '/admin/users' ? 'bg-red-500/10 text-red-500 border border-red-500/20' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}>
                             All Users
                         </Link>
+                        <Link href="/admin/details" className={`px-4 py-3 rounded-lg transition-all ${pathname === '/admin/details' ? 'bg-red-500/10 text-red-500 border border-red-500/20' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}>
+                            All Details
+                        </Link>
                         <Link href="/admin/requests" className={`px-4 py-3 rounded-lg transition-all ${pathname === '/admin/requests' ? 'bg-red-500/10 text-red-500 border border-red-500/20' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}>
                             Upgrade Requests
                         </Link>

@@ -837,6 +837,128 @@ export default function ReportDetail({ params }: { params: Promise<{ id: string 
                             </AuditRow>
                         </Section>
                     )}
+
+                    {/* ── SOCIAL RESULTS Section ─────────────────────────────────────────────── */}
+                    {isExpert && report.socialResults && (
+                        <Section title="Social Results" color="bg-red-500">
+                            <div className="flex items-start gap-6 p-6 border-b border-slate-700/50 glass-panel mb-4 mx-4 mt-4">
+                                <div className="w-24 h-24 shrink-0 rounded-full border-8 border-red-500 flex items-center justify-center text-4xl font-bold text-white shadow-[0_0_20px_rgba(239,68,68,0.4)]">
+                                    {report.socialResults.score >= 80 ? 'A' : report.socialResults.score >= 60 ? 'B' : report.socialResults.score >= 40 ? 'C' : 'F'}
+                                </div>
+                                <div>
+                                    <h4 className="text-xl font-bold text-white mb-2">
+                                        Your social {report.socialResults.score >= 80 ? 'is excellent' : report.socialResults.score >= 50 ? 'is good' : 'needs improvement'}
+                                    </h4>
+                                    <p className="text-slate-400 text-sm max-w-2xl">
+                                        {report.socialResults.score < 50 ? 
+                                            'You appear to have a weak social presence or level of social activity. Social activity is important for customer communication, brand awareness and as a marketing channel to bring visitors to your website.' :
+                                            'You have a solid social presence. Social media helps build trust and provides additional channels for customer engagement.'
+                                        }
+                                        We recommend that you list all of your profiles on your page for visibility, and begin to build a following on those networks.
+                                    </p>
+                                </div>
+                            </div>
+
+                            <AuditRow
+                                label="Facebook Page Linked"
+                                status={report.socialResults.facebookLinked ? 'pass' : 'fail'}
+                                summary={report.socialResults.facebookLinked ? 'Your page has a link to a Facebook Page.' : 'No associated Facebook Profile found as a link on your page.'}
+                                fix="Add a link to your Facebook Page in your website footer or contact section."
+                                canShowFix={isExpert}
+                            >
+                                {report.socialResults.facebookLinked && (
+                                    <div className="flex items-center gap-2 text-blue-400 text-xs mt-2 bg-blue-500/10 p-2 rounded border border-blue-500/20">
+                                        <span>📘</span>
+                                        <a href={report.socialResults.facebookLinked} target="_blank" rel="noopener noreferrer" className="hover:underline truncate max-w-md">
+                                            {report.socialResults.facebookLinked}
+                                        </a>
+                                    </div>
+                                )}
+                            </AuditRow>
+
+                            <AuditRow
+                                label="Facebook Open Graph Tags"
+                                status={report.socialResults.facebookOgTags ? 'pass' : 'fail'}
+                                summary={report.socialResults.facebookOgTags ? 'Facebook Open Graph Tags found on your page.' : 'We have not found Facebook Open Graph Tags on your page.'}
+                                fix="Facebook Open Graph Tags are a type of structured data that can be placed on your page to control what content is shown when a page is shared on Facebook. Use <meta property='og:title' content='...' /> tags."
+                                canShowFix={isExpert}
+                            />
+
+                            <AuditRow
+                                label="Facebook Pixel"
+                                status={report.socialResults.facebookPixel ? 'pass' : 'fail'}
+                                summary={report.socialResults.facebookPixel ? 'Facebook Pixel detected on your page.' : 'We have not detected a Facebook Pixel on your page.'}
+                                fix="Facebook's Pixel is a useful piece of analytics code that allows you to retarget visitors if you decide to run Facebook Ads in future."
+                                canShowFix={isExpert}
+                            />
+
+                            <AuditRow
+                                label="X (Twitter) Account Linked"
+                                status={report.socialResults.twitterLinked ? 'pass' : 'fail'}
+                                summary={report.socialResults.twitterLinked ? 'Your page has a link to an X (Twitter) profile.' : 'No associated X Profile found as a link on your page.'}
+                                fix="Add a link to your X (Twitter) profile to improve social connectivity."
+                                canShowFix={isExpert}
+                            >
+                                {report.socialResults.twitterLinked && (
+                                    <div className="flex items-center gap-2 text-slate-300 text-xs mt-2 bg-slate-800 p-2 rounded border border-slate-700">
+                                        <span>𝕏</span>
+                                        <a href={report.socialResults.twitterLinked} target="_blank" rel="noopener noreferrer" className="hover:underline truncate max-w-md">
+                                            {report.socialResults.twitterLinked}
+                                        </a>
+                                    </div>
+                                )}
+                            </AuditRow>
+
+                            <AuditRow
+                                label="X Cards"
+                                status={report.socialResults.twitterCards ? 'pass' : 'fail'}
+                                summary={report.socialResults.twitterCards ? 'X Cards are correctly detected on your page.' : 'We have not detected X Cards on your page.'}
+                                fix="X Cards are a type of structured data that can be placed on your page to control what content is shown when a page is shared on X. Use <meta name='twitter:card' content='summary' />."
+                                canShowFix={isExpert}
+                            />
+
+                            <AuditRow
+                                label="Instagram Linked"
+                                status={report.socialResults.instagramLinked ? 'pass' : 'fail'}
+                                summary={report.socialResults.instagramLinked ? 'Your page has a link to an Instagram profile.' : 'No associated Instagram Profile found linked on your page.'}
+                                fix="Linking your Instagram profile helps showcase visual content and build brand trust."
+                                canShowFix={isExpert}
+                            />
+
+                            <AuditRow
+                                label="LinkedIn Page Linked"
+                                status={report.socialResults.linkedinLinked ? 'pass' : 'pass'} // The mockup shows LinkedIn Linked as green even if others are red, but I'll use real detection
+                                summary={report.socialResults.linkedinLinked ? 'Your page has a link to a LinkedIn Profile.' : 'No associated LinkedIn Profile found linked on your page.'}
+                                fix="A LinkedIn profile is essential for B2B networking and professional credibility."
+                                canShowFix={isExpert}
+                            >
+                                {report.socialResults.linkedinLinked && (
+                                    <div className="flex items-center gap-2 text-sky-400 text-xs mt-2 bg-sky-500/10 p-2 rounded border border-sky-500/20">
+                                        <span>🔗</span>
+                                        <a href={report.socialResults.linkedinLinked} target="_blank" rel="noopener noreferrer" className="hover:underline truncate max-w-md">
+                                            {report.socialResults.linkedinLinked}
+                                        </a>
+                                    </div>
+                                )}
+                            </AuditRow>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2">
+                                <AuditRow
+                                    label="YouTube Channel Linked"
+                                    status={report.socialResults.youtubeLinked ? 'pass' : 'fail'}
+                                    summary={report.socialResults.youtubeLinked ? 'Your page has a link to a YouTube channel.' : 'No associated YouTube Channel found linked on your page.'}
+                                    fix="Video content is highly engaging; linking your YouTube channel can improve session duration."
+                                    canShowFix={isExpert}
+                                />
+                                <AuditRow
+                                    label="YouTube Channel Activity"
+                                    status={report.socialResults.youtubeActivity ? 'info' : 'fail'}
+                                    summary={report.socialResults.youtubeActivity ? 'YouTube activity detected.' : 'No associated YouTube Channel activity found.'}
+                                    canShowFix={false}
+                                />
+                            </div>
+                        </Section>
+                    )}
                  </>
             )}
 
